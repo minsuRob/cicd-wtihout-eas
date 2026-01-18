@@ -344,6 +344,126 @@ codesign --verify --deep --strict --verbose=2 Payload/App.app
 codesign -d --entitlements - Payload/App.app
 ```
 
+## EAS 독립 세션 사용법 (Python 가상환경 스타일)
+
+기존 EAS 로그인 환경에 영향을 주지 않고, 새로운 독립적인 세션에서 EAS CLI를 사용하고 싶을 때 사용할 수 있습니다. Python의 가상환경(venv)처럼 동작합니다.
+
+### 방법 1: 대화형 세션 활성화 (권장)
+
+독립 환경을 활성화하여 여러 EAS 명령을 연속으로 실행할 때 사용합니다:
+
+```bash
+# 독립 환경 활성화 (환경 이름: production)
+source scripts/ios/eas-login-helper.sh production
+
+# 이제 이 쉘에서 EAS 명령 사용
+eas login
+eas whoami
+eas build:configure
+eas build --platform ios
+
+# 환경 종료
+deactivate_eas_env
+# 또는 단순히 exit
+```
+
+**다른 환경 이름으로 여러 세션 관리:**
+
+```bash
+# 프로덕션 환경
+source scripts/ios/eas-login-helper.sh production
+eas login
+# ... 작업 ...
+deactivate_eas_env
+
+# 스테이징 환경
+source scripts/ios/eas-login-helper.sh staging
+eas login
+# ... 작업 ...
+deactivate_eas_env
+```
+
+### 방법 2: 단일 명령 실행
+
+한 번의 EAS 명령만 실행할 때 사용합니다:
+
+```bash
+# 로그인
+./scripts/ios/eas-env.sh production login
+
+# 현재 사용자 확인
+./scripts/ios/eas-env.sh production whoami
+
+# 빌드 설정
+./scripts/ios/eas-env.sh production build:configure
+
+# 빌드 실행
+./scripts/ios/eas-env.sh production build --platform ios
+```
+
+### 동작 원리
+
+- **독립 환경 디렉토리**: `.eas-env/<환경이름>/` 디렉토리에 EAS 인증 정보 저장
+- **HOME 환경 변수 임시 변경**: `HOME` 환경 변수를 독립 환경 디렉토리로 변경
+- **기존 환경 보호**: 원본 `~/.expo/`와 `~/.eas/` 디렉토리는 그대로 유지
+
+### 디렉토리 구조
+
+```
+프로젝트 루트/
+├── .eas-env/                    # 독립 환경 디렉토리 (gitignore에 추가됨)
+│   ├── production/              # 프로덕션 환경
+│   │   ├── .expo/              # EAS 인증 정보
+│   │   └── .eas/               # EAS 설정
+│   └── staging/                # 스테이징 환경
+│       ├── .expo/
+│       └── .eas/
+└── scripts/
+    └── ios/
+        ├── eas-login-helper.sh  # 대화형 세션 스크립트
+        └── eas-env.sh          # 단일 명령 스크립트
+```
+
+### .gitignore 추가
+
+`.eas-env/` 디렉토리는 자동으로 `.gitignore`에 추가되어야 합니다:
+
+```bash
+# .gitignore에 추가 (이미 있을 수도 있음)
+echo ".eas-env/" >> .gitignore
+```
+
+### 예시 시나리오
+
+**시나리오 1: 회사 계정과 개인 계정 분리**
+
+```bash
+# 회사 프로젝트용
+source scripts/ios/eas-login-helper.sh company
+eas login  # 회사 계정으로 로그인
+# ... 작업 ...
+deactivate_eas_env
+
+# 개인 프로젝트용 (기존 환경 사용)
+eas whoami  # 원래 계정
+```
+
+**시나리오 2: 프로덕션과 스테이징 환경 분리**
+
+```bash
+# 프로덕션 환경
+./scripts/ios/eas-env.sh production build --platform ios --profile production
+
+# 스테이징 환경
+./scripts/ios/eas-env.sh staging build --platform ios --profile staging
+```
+
+### 주의사항
+
+- 독립 환경을 사용하는 동안에는 해당 환경의 인증 정보만 사용됩니다
+- `deactivate_eas_env`를 실행하거나 쉘을 종료하면 원본 환경으로 자동 복원됩니다
+- 각 환경은 완전히 독립적이므로, 각 환경에서 별도로 로그인해야 합니다
+
 ## 라이선스
 
 이 스크립트는 프로젝트와 동일한 라이선스를 따릅니다.

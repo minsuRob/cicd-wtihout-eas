@@ -9,6 +9,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# EAS 독립 환경
+.eas-env/
+
 # Native
 .kotlin/
 *.orig.*
